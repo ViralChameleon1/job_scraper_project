@@ -11,7 +11,7 @@ The script performs the following steps:
 3. Extracts structured job data (title, company, location)
 4. Stores the extracted records in a list
 5. Converts the data into a pandas DataFrame
-6. Saves the processed data to a SQLite database
+6. Saves the processed data to both a CSV file and a SQLite database
 
 The pipeline is organized into modular functions:
 
@@ -43,4 +43,5 @@ This project is designed as a first attempt at web scraping and basic data proce
     python scraper.py  
 
 The script will scrape job listings and store the processed data in:
+scraped_data.csv  
 jobs.db
