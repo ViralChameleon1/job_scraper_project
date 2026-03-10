@@ -1,57 +1,68 @@
-#Run Start message
-print("Starting job scraping pipeline...")
-
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import sqlite3
 
-# Define the webpage we want to scrape
-url = "https://example.com"
+def fetch_page(url):
+    """Fetch webpage HTML."""
+    response = requests.get(url, verify=False)
+    response.raise_for_status()
+    return response.text
 
-# Send a request to the website
-# verify=False temporarily bypasses SSL issues
-response = requests.get(url, verify=False)
+def parse_jobs(soup):
+    job_cards = soup.find_all("div", class_="card-content")
+    job_data = []
+    for job in job_cards:
+        title = job.find("h2", class_="title").text.strip()
+        company = job.find("h3", class_="company").text.strip()
+        location = job.find("p", class_="location").text.strip()
+        job_data.append({
+            "title": title,
+            "company": company,
+            "location": location
+        })
+    return job_cards, job_data
 
-# Confirm the request worked
-# 200 = success
-print(response.status_code)
+def save_results(df):
+    df.to_csv("scraped_data.csv", index=False)
+    print("Data saved to scraped_data.csv")
 
-# Print the first 500 characters
-# of the page HTML so we can inspect it
-    #print(response.text[:500])
+    conn = sqlite3.connect("jobs.db")
+    df.to_sql("jobs", conn, if_exists="replace", index=False)
+    conn.close()
+
+def main():
+
+    # Start pipeline
+    print("Starting job scraping pipeline...")
+
+    # Target job listings page
+    url = "https://realpython.github.io/fake-jobs/"
+
+    # Fetch webpage
+    html = fetch_page(url)
+
+    # --- Debugging checks used during development ---
+    # print(response.status_code)
+    # print(response.text[:500])
+    # --- End debugging checks ---
+
+    # Parse HTML
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Locate job listing cards
+    job_cards, job_data = parse_jobs(soup)
+    print(f"{len(job_cards)} jobs found")
+
+    # Build DataFrame
+    df = pd.DataFrame(job_data)
+
+    save_results(df)
+
+    # Finish pipeline
+    print("Pipeline completed successfully.")
 
 
-# Parse the HTML using BeautifulSoup
-# converts raw HTML into a structure that I can search and extract data from
-soup = BeautifulSoup(response.text, "html.parser")
-
-# Extract and print the page title
-title = soup.title.text
-print(title)
-
-# Extract and print the main heading from the page
-heading = soup.find("h1").text
-print(heading)
-
-# Extract and print the first paragraph from the page
-paragraph = soup.find("p").text
-print(paragraph)
-
-# Extract all paragraph elements from the page and store their data in a list
-paragraphs = soup.find_all("p")
-paragraph_list = []
-for p in paragraphs:
-    text = p.text
-    print(text)
-    paragraph_list.append(text)
-    
-# Convert scraped data into a pandas DataFrame and print it
-df = pd.DataFrame(paragraph_list, columns=["paragraph_text"])
-print(df)
-
-# Save the DataFrame to a CSV file
-df.to_csv("scraped_data.csv", index=False)
-print("Data saved to scraped_data.csv")
-
-#Run finished messaage
-print("Pipeline completed successfully.")
+# Run script
+if __name__ == "__main__":
+    main()
